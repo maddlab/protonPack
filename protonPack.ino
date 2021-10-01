@@ -6,13 +6,16 @@
 
 /************** Animation Speeds ********************/
 int pwrInterval = 45;               // powercell animation speed
-int cycloInterval = 400;            // cyclotron animation speed
+int cycloInterval = 1000;            // cyclotron animation speed
 
 // When we setup the NeoPixel library, we tell it how many pixels, and which pin to use
 Adafruit_NeoPixel powercell(16, POWERCELL_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel cyclotron(4, CYCLOTRON_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
+  // Initialize serial
+  Serial.begin(9600);
+  
   // Initialize powercell LEDS to 'off' and set brightness
   powercell.begin();
   powercell.show();
@@ -26,14 +29,10 @@ void setup() {
 /************************* Main **********************/
 void loop() {
   int currentMillis = millis();
-  
+
   powerCell_normalMode(currentMillis, pwrInterval);
   cyclotron_normalMode(currentMillis, cycloInterval);
-//cyclotron.setPixelColor(0, cyclotron.Color(0,150,0));
-//cyclotron.setPixelColor(1, cyclotron.Color(0,150,0));
-//cyclotron.setPixelColor(2, cyclotron.Color(0,150,0));
-//cyclotron.setPixelColor(3, cyclotron.Color(0,150,0));
-//cyclotron.show();
+
 }
 /************************ End Main ***************************/
 
@@ -45,32 +44,55 @@ int cycloSeqNum = 0;
 
 void cyclotron_normalMode(int currentMillis, int anispeed)
 {
- if(currentMillis - prevCycloMillis > anispeed)
- {
-  // save the last time we blinked a cyclotron led
-  prevCycloMillis = currentMillis;
+  if (currentMillis - prevCycloMillis > anispeed)
+  {
+    // save the last time we blinked a cyclotron led
+    prevCycloMillis = currentMillis;
+    Serial.println(cycloSeqNum);
 
-  for(int i=0; i<cycloSeqTotal; i++)
-  {
-    if(i <= cycloSeqNum)
+    if(cycloSeqNum == cycloSeqTotal)
     {
-      cyclotron.setPixelColor(i, cyclotron.Color(150,0,0));
+      cycloSeqNum = 0;
     }
-    else
+
+    switch (cycloSeqNum)
     {
-      cyclotron.setPixelColor(i, 0);
+      case 0:
+        cyclotron.setPixelColor(0, cyclotron.Color(150, 0, 0));
+        cyclotron.setPixelColor(1, 0);
+        cyclotron.setPixelColor(2, 0);
+        cyclotron.setPixelColor(3, 0);
+        cycloSeqNum++;
+        break;
+
+      case 1:
+        cyclotron.setPixelColor(0, 0);
+        cyclotron.setPixelColor(1, cyclotron.Color(150, 0, 0));
+        cyclotron.setPixelColor(2, 0);
+        cyclotron.setPixelColor(3, 0);
+        cycloSeqNum++;
+        break;
+
+      case 2:
+        cyclotron.setPixelColor(0, 0);
+        cyclotron.setPixelColor(1, 0);
+        cyclotron.setPixelColor(2, cyclotron.Color(150, 0, 0));
+        cyclotron.setPixelColor(3, 0);
+        cycloSeqNum++;
+        break;
+
+      case 3:
+        cyclotron.setPixelColor(0, 0);
+        cyclotron.setPixelColor(1, 0);
+        cyclotron.setPixelColor(2, 0);
+        cyclotron.setPixelColor(3, cyclotron.Color(150, 0, 0));
+        cycloSeqNum++;
+        break;
     }
+
+    cyclotron.show();
+
   }
-  cyclotron.show();
-  if(cycloSeqNum < cycloSeqTotal)
-  {
-    cycloSeqNum++;
-  }
-  else
-  {
-    cycloSeqNum = 0;
-  }
- }
 }
 
 /****************** Powercell Animation *********************/
@@ -81,16 +103,16 @@ int powerSeqNum = 0;
 
 void powerCell_normalMode(int currentMillis, int anispeed)
 {
-  if(currentMillis - prevPwrMillis > anispeed)
+  if (currentMillis - prevPwrMillis > anispeed)
   {
     // save the last time we blinked a powercell led
     prevPwrMillis = currentMillis;
 
-    for(int i=0; i<powerSeqTotal; i++)
+    for (int i = 0; i < powerSeqTotal; i++)
     {
-      if(i <= powerSeqNum)
+      if (i <= powerSeqNum)
       {
-        powercell.setPixelColor(i, powercell.Color(0,0,150)); 
+        powercell.setPixelColor(i, powercell.Color(0, 0, 150));
       }
       else
       {
@@ -98,7 +120,7 @@ void powerCell_normalMode(int currentMillis, int anispeed)
       }
     }
     powercell.show();
-    if(powerSeqNum < powerSeqTotal)
+    if (powerSeqNum < powerSeqTotal)
     {
       powerSeqNum++;
     }
