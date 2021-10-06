@@ -8,16 +8,18 @@
 #define CYCLOTRON_PIN 3
 #define WANDTIP_PIN 4
 #define TRIGGER_PIN 5
+#define WAND_CLIPPARD_LEFT 6
 
 /************** Animation Speeds ********************/
 int pwrInterval = 45;               // powercell animation speed
-int cycloInterval = 1000;           // cyclotron animation speed
+int cycloInterval = 700;           // cyclotron animation speed
 int wandtipInterval = 500;          // wand tip animation speed
 
 // When we setup the NeoPixel library, we tell it how many pixels, and which pin to use
 Adafruit_NeoPixel powercell(16, POWERCELL_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel cyclotron(4, CYCLOTRON_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel wandtip(7, WANDTIP_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel wand_clippard_left(1, WAND_CLIPPARD_LEFT, NEO_GRB + NEO_KHZ800);  // orange light to the left of the clippard
 
 void setup() {
   // Initialize serial
@@ -37,7 +39,11 @@ void setup() {
 
   wandtip.begin();
   wandtip.show();
-  wandtip.setBrightness(50);
+  wandtip.setBrightness(255);
+
+  wand_clippard_left.begin();
+  wand_clippard_left.show();
+  wand_clippard_left.setBrightness(255);
 }
 
 /************************* Main **********************/
@@ -50,6 +56,11 @@ void loop() {
   {
     wandtip_fire();
   }
+
+
+  // LATEST
+  wand_clippard_left.setPixelColor(0, wand_clippard_left.Color(255,50,0));    // orange
+  wand_clippard_left.show();
 }
 /************************ End Main ***************************/
 
@@ -62,7 +73,7 @@ void wandtip_normalMode()
 
 void wandtip_fire()
 {
-  wandtip.fill(255, 0, 0);
+  wandtip.fill(wandtip.Color(255,255,255), 0, 0);
   wandtip.show();
 }
 
