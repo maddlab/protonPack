@@ -9,6 +9,7 @@
 #define WANDTIP_PIN 4
 #define TRIGGER_PIN 5
 #define WAND_CLIPPARD_LEFT 6
+#define PACK_POWER_PIN 7
 
 /************** Animation Speeds ********************/
 int pwrInterval = 45;               // powercell animation speed
@@ -27,6 +28,7 @@ void setup() {
 
   // Initialize pinModes
   pinMode(TRIGGER_PIN, INPUT);
+  pinMode(PACK_POWER_PIN, INPUT);
 
   // Initialize powercell LEDS to 'off' and set brightness
   powercell.begin();
@@ -48,19 +50,37 @@ void setup() {
 
 /************************* Main **********************/
 void loop() {
-  int currentMillis = millis();
-  powerCell_normalMode(currentMillis, pwrInterval);
-  cyclotron_normalMode(currentMillis, cycloInterval);
-  wandtip_normalMode();
-  if (digitalRead(TRIGGER_PIN) == 1)
+
+  // if pack power is on
+  if (digitalRead(PACK_POWER_PIN) == 1)
   {
-    wandtip_fire();
+    int currentMillis = millis();
+    powerCell_normalMode(currentMillis, pwrInterval);
+    cyclotron_normalMode(currentMillis, cycloInterval);
+    wandtip_normalMode();
+    if (digitalRead(TRIGGER_PIN) == 1)
+    {
+      wandtip_fire();
+    }
+
+
+    // LATEST
+    wand_clippard_left.setPixelColor(0, wand_clippard_left.Color(255, 50, 0));  // orange
+    wand_clippard_left.show();
   }
 
+  // if pack power is off
+  else
+  {
+    powercell.clear();
+    powercell.show();
 
-  // LATEST
-  wand_clippard_left.setPixelColor(0, wand_clippard_left.Color(255,50,0));    // orange
-  wand_clippard_left.show();
+    cyclotron.clear();
+    cyclotron.show();
+
+    wand_clippard_left.clear();
+    wand_clippard_left.show();
+  }
 }
 /************************ End Main ***************************/
 
@@ -73,7 +93,7 @@ void wandtip_normalMode()
 
 void wandtip_fire()
 {
-  wandtip.fill(wandtip.Color(255,255,255), 0, 0);
+  wandtip.fill(wandtip.Color(255, 255, 255), 0, 0);
   wandtip.show();
 }
 
