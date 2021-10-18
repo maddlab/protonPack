@@ -3,14 +3,19 @@
 
 #include <Adafruit_NeoPixel.h>
 
-// Which pin is connected to NeoPixels?
+// For the pack lights
 #define POWERCELL_PIN 2
 #define CYCLOTRON_PIN 3
-#define WANDTIP_PIN 4
-#define TRIGGER_PIN 5
+#define WANDTIP_PIN 4               // this is for the wand tip neopixel
+#define TRIGGER_PIN 5               // input for wand firing
 #define WAND_CLIPPARD_LEFT 6
 #define PACK_POWER_PIN 7
 #define VENT_LIGHT_PIN 8
+
+// For pack sounds
+#define SFX_POWERUP 9
+
+int current_state, prev_state;
 
 /************** Animation Speeds ********************/
 int pwrInterval = 45;               // powercell animation speed
@@ -25,12 +30,14 @@ Adafruit_NeoPixel wand_clippard_left(1, WAND_CLIPPARD_LEFT, NEO_GRB + NEO_KHZ800
 Adafruit_NeoPixel vent_light(4, VENT_LIGHT_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
+  
   // Initialize serial
   Serial.begin(9600);
 
   // Initialize pinModes
   pinMode(TRIGGER_PIN, INPUT);
   pinMode(PACK_POWER_PIN, INPUT);
+  pinMode(SFX_POWERUP, OUTPUT);
 
   // Initialize powercell LEDS to 'off' and set brightness
   powercell.begin();
@@ -52,24 +59,32 @@ void setup() {
   vent_light.begin();
   vent_light.show();
   vent_light.setBrightness(255);
+
+  // Initialize SFXs pins to HIGH
+  digitalWrite(SFX_POWERUP, HIGH);
+
+  // Initialize state
+  current_state = 0;
+  prev_state = current_state;
 }
 
 /************************* Main **********************/
 void loop() {
-
+  Serial.println(current_state);
   // if pack power is on
   if (digitalRead(PACK_POWER_PIN) == 1)
   {
+    if(current_state == 0)
+    {
+      digitalWrite(SFX_POWERUP, LOW);
+      current_state = 1;
+      Serial.println(current_state);
+    }
+    
     int currentMillis = millis();
     powerCell_normalMode(currentMillis, pwrInterval);
     cyclotron_normalMode(currentMillis, cycloInterval);
-    
-    //cyclotron.fill(cyclotron.Color(255,0,0), 0, 7);
-    //cyclotron.fill(cyclotron.Color(255,0,0), 7, 7);
-    //cyclotron.fill(cyclotron.Color(255,0,0), 14, 7);
-    //cyclotron.fill(cyclotron.Color(255,0,0), 21, 7);
-    //cyclotron.show();
-    
+
     wandtip_normalMode();
     if (digitalRead(TRIGGER_PIN) == 1)
     {
@@ -85,6 +100,7 @@ void loop() {
   // if pack power is off
   else
   {
+    digitalWrite(SFX_POWERUP, HIGH);
     powercell.clear();
     powercell.show();
 
@@ -100,10 +116,18 @@ void loop() {
 }
 /************************ End Main ***************************/
 
+/****************** Boot-up Sequence *********************/
+void boot_up_sequence()
+{
+  digitalWrite(SFX_POWERUP, LOW);
+  digitalWrite(SFX_POWERUP, HIGH);
+}
+
+
 /****************** Vent light Animation *********************/
 void vent_light_normalMode()
 {
-  vent_light.fill(vent_light.Color(255,255,255));
+  vent_light.fill(vent_light.Color(255, 255, 255));
   vent_light.show();
 }
 
@@ -142,34 +166,34 @@ void cyclotron_normalMode(int currentMillis, int anispeed)
     switch (cycloSeqNum)
     {
       case 0:
-        cyclotron.fill(cyclotron.Color(255,0,0), 0, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 7, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 14, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 21, 7);
+        cyclotron.fill(cyclotron.Color(255, 0, 0), 0, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 7, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 14, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 21, 7);
         cycloSeqNum++;
         break;
 
       case 1:
-        cyclotron.fill(cyclotron.Color(0,0,0), 0, 7);
-        cyclotron.fill(cyclotron.Color(255,0,0), 7, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 14, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 21, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 0, 7);
+        cyclotron.fill(cyclotron.Color(255, 0, 0), 7, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 14, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 21, 7);
         cycloSeqNum++;
         break;
 
       case 2:
-        cyclotron.fill(cyclotron.Color(0,0,0), 0, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 7, 7);
-        cyclotron.fill(cyclotron.Color(255,0,0), 14, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 21, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 0, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 7, 7);
+        cyclotron.fill(cyclotron.Color(255, 0, 0), 14, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 21, 7);
         cycloSeqNum++;
         break;
 
       case 3:
-        cyclotron.fill(cyclotron.Color(0,0,0), 0, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 7, 7);
-        cyclotron.fill(cyclotron.Color(0,0,0), 14, 7);
-        cyclotron.fill(cyclotron.Color(255,0,0), 21, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 0, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 7, 7);
+        cyclotron.fill(cyclotron.Color(0, 0, 0), 14, 7);
+        cyclotron.fill(cyclotron.Color(255, 0, 0), 21, 7);
         cycloSeqNum++;
         break;
     }
