@@ -7,10 +7,14 @@
 #define POWERCELL_PIN 2
 #define CYCLOTRON_PIN 3
 #define WANDTIP_PIN 4               // this is for the wand tip neopixel
-#define TRIGGER_PIN 5               // input for wand firing
-#define WAND_CLIPPARD_LEFT 6
-#define PACK_POWER_PIN 7
-#define VENT_LIGHT_PIN 8
+#define WAND_AUX_PIN 6
+#define N_FILTER_PIN 8
+
+// Switches
+#define WAND_BOOTUP_PIN 5
+#define SWITCH_4_PIN 10
+#define TRIGGER_PIN 11               // input for wand firing
+#define PACK_POWER_PIN 12
 
 // For pack sounds
 #define SFX_POWERUP 9
@@ -26,11 +30,12 @@ int wandtipInterval = 500;          // wand tip animation speed
 Adafruit_NeoPixel powercell(16, POWERCELL_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel cyclotron(28, CYCLOTRON_PIN, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel wandtip(7, WANDTIP_PIN, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel wand_clippard_left(1, WAND_CLIPPARD_LEFT, NEO_GRB + NEO_KHZ800);  // orange light to the left of the clippard
-Adafruit_NeoPixel vent_light(4, VENT_LIGHT_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel wand_aux(5, WAND_AUX_PIN, NEO_GRB + NEO_KHZ800);
+//Adafruit_NeoPixel vent_light(4, VENT_LIGHT_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel n_filter(4, N_FILTER_PIN, NEO_GRB + NEO_KHZ800);
 
 void setup() {
-  
+
   // Initialize serial
   Serial.begin(9600);
 
@@ -52,13 +57,13 @@ void setup() {
   wandtip.show();
   wandtip.setBrightness(255);
 
-  wand_clippard_left.begin();
-  wand_clippard_left.show();
-  wand_clippard_left.setBrightness(255);
+  wand_aux.begin();
+  wand_aux.show();
+  wand_aux.setBrightness(255);
 
-  vent_light.begin();
-  vent_light.show();
-  vent_light.setBrightness(255);
+  n_filter.begin();
+  n_filter.show();
+  n_filter.setBrightness(255);
 
   // Initialize SFXs pins to HIGH
   digitalWrite(SFX_POWERUP, HIGH);
@@ -68,33 +73,47 @@ void setup() {
   prev_state = current_state;
 }
 
+
 /************************* Main **********************/
 void loop() {
-  Serial.println(current_state);
+  //wandtip.fill(wandtip.Color(255,255,255));
+  //wandtip.show();
   // if pack power is on
+  Serial.println(digitalRead(PACK_POWER_PIN));
   if (digitalRead(PACK_POWER_PIN) == 1)
   {
-    if(current_state == 0)
+    Serial.println(digitalRead(PACK_POWER_PIN));
+    digitalRead(PACK_POWER_PIN);
+    if (current_state == 0)
     {
       digitalWrite(SFX_POWERUP, LOW);
       current_state = 1;
       Serial.println(current_state);
     }
-    
+
     int currentMillis = millis();
     powerCell_normalMode(currentMillis, pwrInterval);
     cyclotron_normalMode(currentMillis, cycloInterval);
+    
+    n_filter.setPixelColor(0, n_filter.Color(255,255,255));
+    n_filter.setPixelColor(1, n_filter.Color(255,255,255));
+    n_filter.setPixelColor(2, n_filter.Color(255,255,255));
+    n_filter.setPixelColor(3, n_filter.Color(255,255,255));
+    n_filter.show();
+
+    wand_aux.setPixelColor(0, wand_aux.Color(255, 255, 255));
+    wand_aux.setPixelColor(1, wand_aux.Color(235, 213, 52));
+    wand_aux.setPixelColor(2, wand_aux.Color(255, 255, 255));
+    wand_aux.setPixelColor(3, wand_aux.Color(255, 255, 255));
+    wand_aux.setPixelColor(4, wand_aux.Color(255, 255, 255));
+    wand_aux.show();
 
     wandtip_normalMode();
     if (digitalRead(TRIGGER_PIN) == 1)
     {
-      wandtip_fire();
+      //wandtip_fire();
+      fireStrobe(currentMillis);
     }
-
-    vent_light_normalMode();
-
-    wand_clippard_left.setPixelColor(0, wand_clippard_left.Color(255, 50, 0));  // orange
-    wand_clippard_left.show();
   }
 
   // if pack power is off
@@ -107,11 +126,11 @@ void loop() {
     cyclotron.clear();
     cyclotron.show();
 
-    wand_clippard_left.clear();
-    wand_clippard_left.show();
+    wand_aux.clear();
+    wand_aux.show();
 
-    vent_light.clear();
-    vent_light.show();
+    n_filter.clear();
+    n_filter.show();
   }
 }
 /************************ End Main ***************************/
@@ -121,14 +140,6 @@ void boot_up_sequence()
 {
   digitalWrite(SFX_POWERUP, LOW);
   digitalWrite(SFX_POWERUP, HIGH);
-}
-
-
-/****************** Vent light Animation *********************/
-void vent_light_normalMode()
-{
-  vent_light.fill(vent_light.Color(255, 255, 255));
-  vent_light.show();
 }
 
 /****************** Wand Tip Animation *********************/
@@ -235,6 +246,96 @@ void powerCell_normalMode(int currentMillis, int anispeed)
     else
     {
       powerSeqNum = 0;
+    }
+  }
+}
+
+
+
+
+/*************** Nose Jewel Firing Animations *********************/
+unsigned long prevFireMillis = 0;
+const unsigned long fire_interval = 500;     // interval at which to cycle lights (milliseconds).
+int fireSeqNum = 0;
+int fireSeqTotal = 5;
+
+//wandtip.fill(wandtip.Color(134,253,258));
+
+void clearFireStrobe() {
+  for ( int i = 0; i < 7; i++) {
+    wandtip.setBrightness(255);
+    wandtip.setPixelColor(i, 0);
+  }
+  wandtip.show();
+  fireSeqNum = 0;
+}
+
+void fireStrobe(unsigned long currentMillis) {
+  if ((unsigned long)(currentMillis - prevFireMillis) >= fire_interval) {
+    prevFireMillis = currentMillis;
+
+    switch ( fireSeqNum ) {
+      case 0:
+        wandtip.setPixelColor(0, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(1, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(2, 0);
+        wandtip.setPixelColor(3, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(4, 0);
+        wandtip.setPixelColor(5, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(6, 0);
+        break;
+      case 1:
+        wandtip.setPixelColor(0, wandtip.Color(0, 0, 255));
+        wandtip.setPixelColor(1, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(2, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(3, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(4, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(5, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(6, wandtip.Color(255, 255, 255));
+        break;
+      case 2:
+        wandtip.setPixelColor(0, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(1, 0);
+        wandtip.setPixelColor(2, wandtip.Color(0, 0, 255));
+        wandtip.setPixelColor(3, 0);
+        wandtip.setPixelColor(4, wandtip.Color(0, 0, 255));
+        wandtip.setPixelColor(5, 0);
+        wandtip.setPixelColor(6, wandtip.Color(255, 0, 0));
+        break;
+      case 3:
+        wandtip.setPixelColor(0, wandtip.Color(0, 0, 255));
+        wandtip.setPixelColor(1, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(2, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(3, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(4, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(5, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(6, wandtip.Color(255, 255, 255));
+        break;
+      case 4:
+        wandtip.setPixelColor(0, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(1, 0);
+        wandtip.setPixelColor(2, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(3, 0);
+        wandtip.setPixelColor(4, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(5, 0);
+        wandtip.setPixelColor(6, wandtip.Color(255, 255, 255));
+        break;
+      case 5:
+        wandtip.setPixelColor(0, wandtip.Color(255, 0, 255));
+        wandtip.setPixelColor(1, wandtip.Color(0, 255, 0));
+        wandtip.setPixelColor(2, wandtip.Color(255, 0, 0));
+        wandtip.setPixelColor(3, wandtip.Color(0, 0, 255));
+        wandtip.setPixelColor(4, wandtip.Color(255, 0, 255));
+        wandtip.setPixelColor(5, wandtip.Color(255, 255, 255));
+        wandtip.setPixelColor(6, wandtip.Color(0, 0, 255));
+        break;
+    }
+
+    wandtip.show();
+
+    fireSeqNum++;
+    if ( fireSeqNum > fireSeqTotal ) {
+      fireSeqNum = 0;
     }
   }
 }
